@@ -31,11 +31,7 @@ def init_db(engine):
     """)
     engine.execute(create_candle_db_statement)
 
-logging.basicConfig(
-    filename='/Users/user/Documents/PYTHON_PROJECTS/bitmex_trade_grab/log.txt', 
-    format='%(levelname)s: %(asctime)s %(message)s', 
-    datefmt='%m/%d/%Y %I:%M:%S %p',
-    level=logging.DEBUG)
+
 
 def get_load_data_statement(api_resp_bucketd, meta):
     """
@@ -144,6 +140,8 @@ def get_load_data_statement(api_resp_bucketd, meta):
 def BitMEX_ETL_fn(engine, meta):
     print("BitMEX_ETL_fn()")
     rate_limit = meta['rate_limit']
+    count = meta['count']
+
     start_time = datetime.datetime.utcnow()
     total_inserted = 0
 
@@ -193,7 +191,7 @@ def BitMEX_ETL_fn(engine, meta):
         for j in range(0, rate_limit):
             api_params = dict(
                 symbol=meta['symbol'],
-                count=1000,
+                count=count,
                 start=start_param,
                 reverse='false',
                 startTime=start_from_timestamp
@@ -226,7 +224,7 @@ def BitMEX_ETL_fn(engine, meta):
 
             # set the correct start_param
             total_entries_with_recent_timestamp = len(list(filter(lambda x: x['timestamp']==most_recent_timestamp_str, response.json())))
-            if total_entries_with_recent_timestamp == 1000:
+            if total_entries_with_recent_timestamp == count:
                 start_param = start_param + total_entries_with_recent_timestamp
             else: 
                 start_param = total_entries_with_recent_timestamp
@@ -308,6 +306,12 @@ def BitMEX_ETL_fn(engine, meta):
             api_call_times = list(filter(lambda x: (end_time-x).total_seconds()<=60, api_call_times))
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        filename='/Users/user/Documents/PYTHON_PROJECTS/bitmex_trade_grab/log.txt', 
+        format='%(levelname)s: %(asctime)s %(message)s', 
+        datefmt='%m/%d/%Y %I:%M:%S %p',
+        level=logging.DEBUG)
+
     logging.info('STARTING UP')
     print(datetime.datetime.now())
 
@@ -321,6 +325,7 @@ if __name__ == '__main__':
         meta={
             'symbol': 'XBTUSD',
             'load_timestamp': datetime.datetime.utcnow(),
-            'rate_limit': 30
+            'rate_limit': 30, # rate limit per minute
+            'count':1000, # number of trades per request 
         }
     )
